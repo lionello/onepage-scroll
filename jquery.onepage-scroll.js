@@ -12,6 +12,14 @@
  *
  * License: GPL v3
  *
+ * Changes have been made. 
+ * 
+ * NEW: Avoid multiple touchmove events
+ * NEW: Prevent default event (had issues on mobile)
+ * NEW: Use jQuery off() to remove the touchmove event
+ * NEW: Removed history management in moveTo function
+ * NEW: Manage back/forward in browser history
+ *
  * ========================================================== */
 
 !function($){
@@ -48,11 +56,18 @@
           if (touches && touches.length) {
             startX = touches[0].pageX;
             startY = touches[0].pageY;
-            $this.bind('touchmove', touchmove);
+
+            // BEGIN Avoid multiple touchmove events
+            $this.off('touchmove').on('touchmove', touchmove);
+            // END Avoid multiple touchmove events
           }
         }
 
         function touchmove(event) {
+          // BEGIN Prevent default event (had issues on mobile)
+          event.preventDefault();
+          // END Prevent default event (had issues on mobile)
+
           var touches = event.originalEvent.touches;
           if (touches && touches.length) {
             var deltaX = startX - touches[0].pageX;
@@ -71,14 +86,14 @@
               $this.trigger("swipeDown");
             }
             if (Math.abs(deltaX) >= 50 || Math.abs(deltaY) >= 50) {
-              $this.unbind('touchmove', touchmove);
+              // BEGIN Use jQuery off() to remove the touchmove event
+              $this.off('touchmove', touchmove);
+              // END Use jQuery off() to remove the touchmove event
             }
           }
         }
-
       });
     };
-
 
   $.fn.onepage_scroll = function(options){
     var settings = $.extend({}, defaults, options),
@@ -208,6 +223,7 @@
             var href = window.location.href.substr(0,window.location.href.indexOf('#')) + "#" + (page_index - 1);
             history.pushState( {}, document.title, href );
         }
+
         el.transformPage(settings, pos, page_index);
       }
     }
@@ -419,6 +435,22 @@
 
       });
     }
+
+    // START Manage back/forward in browser history
+    $(window).on('hashchange', function(e) {
+      if (e && e.originalEvent && e.originalEvent.newURL) {
+        var newURL = e.originalEvent.newURL;
+        var pos = newURL.indexOf('#');
+        var page = 1;
+        if (pos >= 0) {
+          page = newURL.substring(pos+1);
+        }
+
+        $(this).moveTo(page);
+      }
+    });
+    // END Manage back/forward in browser history
+
     return false;
   }
 
